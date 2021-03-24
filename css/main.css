@@ -1861,6 +1861,13 @@ textarea.form-control, textarea.form-control:focus {
 .ajax-page-title h1 {
   display: inline-block;
   margin: 0;
+  font-family: "Times New Roman", Times, serif;
+}
+
+.ajax-page-title h3 {
+  display: inline-block;
+  margin: 0;
+  font-family: "Times New Roman", Times, serif;
 }
 
 .portfolio-block {
