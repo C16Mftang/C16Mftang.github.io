@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Mufeng Tang" />
+  <title>From the EM Algorithm to Predictive Coding</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: "Open Sans", sans-serif;
+      font-size: 17px;
+      color: #1a1a1a;
+      background-color: transparent;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 70em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.5em;
+        padding: 1em;
+      }
+      h1 {
+        font-size: 1.2em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+  </style>
+  <script
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"
+  type="text/javascript"></script>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">From the EM Algorithm to Predictive Coding</h1>
+<p class="author">Mufeng Tang</p>
+<p class="date">February 27, 2022</p>
+</header>
+<!-- <nav id="TOC" role="doc-toc"> -->
+<!-- <ul>
+<li><a href="#models-of-the-observed-world">Models of the observed
+world</a></li>
+<li><a href="#maximizing-f-the-em-algorithm">Maximizing <span
+class="math inline">\(F\)</span>: the EM algorithm</a></li>
+<li><a
+href="#predictive-coding-as-a-special-case-of-the-em-algorithm">Predictive
+Coding as a special case of the EM algorithm</a></li>
+<li><a href="#further-thoughts">Further thoughts</a></li>
+</ul>
+</nav> -->
+<p>I spent the first few weeks of my PhD understanding predictive coding
+(PC) as a computational model for perception and learning in the brain,
+whose alternating nature is reminiscent of the Expectation-Maximization
+(EM) algorithm at first sight. Realizing that it <em>is</em> in fact a
+special case of the EM algorithm, I decided to write it down in this
+(and also my first!) scientific blog.</p>
+<p>The content of this blog has been extensively discussed in Karl
+Friston’s papers, for example <a
+href="https://pubmed.ncbi.nlm.nih.gov/14622888/">this one</a>. However,
+since I come from a statistical background to the field of theoretical
+neuroscience, this blog may be particularly helpful for
+statisticians/mathematicians/computer scientists to understand
+predictive coding, an interesting theory of how our brain works.</p>
+<h1 id="models-of-the-observed-world">Models of the observed world</h1>
+<p>The motivation for the EM algorithm is to build up a model <span
+class="math inline">\(\theta\)</span> of the observed world <span
+class="math inline">\(x\)</span>. The goal is to maximize the log
+likelihood with respect to <span
+class="math inline">\(\theta\)</span>:</p>
+<p><span class="math display">\[\log{p_{\theta}(x)}\]</span></p>
+<p>In particular, the EM algorithm assumes that there is a hidden, or
+‘latent’ cause <span class="math inline">\(z\)</span> of the
+observations <span class="math inline">\(x\)</span>, and therefore the
+log likelihood can be written as:</p>
+<p><span class="math display">\[\log\int_z p_{\theta}(z,x)
+dz\]</span></p>
+<p>and we want to maximize this value over possible values of <span
+class="math inline">\(z\)</span> and <span
+class="math inline">\(\theta\)</span>. The direct optimization of this
+integral is, as it appears, impossible, so the following mathematical
+manipulations are introduced to work it around.</p>
+<p>Suppose now we have an arbitrary distribution over <span
+class="math inline">\(z\)</span>: <span
+class="math inline">\(q(z)\)</span>. <a
+href="https://en.wikipedia.org/wiki/Jensen%27s_inequality">Jensen’s
+inequality</a> gives that:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\log\int_z p_{\theta}(z,x) dz &amp;= \log\int
+q(z)\frac{p_{\theta}(z,x)}{q(z)} dz \\ &amp;\geq \int q(z)\log
+\frac{p_{\theta}(z,x)}{q(z)}dz
+\end{aligned}
+\]</span></p>
+<p>We define <span class="math inline">\(F:=\int q(z)\log
+\frac{p_{\theta}(z,x)}{q(z)}dz\)</span> and thus:</p>
+<p><span class="math display">\[
+\begin{aligned}
+F &amp;= \int q(z) \log p_{\theta} (z,x)dz - \int q(z)\log q(z) \\
+   &amp;= \mathbb{E}_q\left[\log p_{\theta} (z,x) - \log q(z) \right] \\
+   &amp;= \mathbb{E}_q\left[\log p_{\theta} (z,x)\right] + H[q]
+\end{aligned}
+\]</span></p>
+<p>where <span class="math inline">\(H[q]\)</span> is the entropy of
+<span class="math inline">\(q(z)\)</span>. <span
+class="math inline">\(F\)</span> is usually called the ‘free energy’, as
+it is defined in physics as the sum of a negative energy term and an
+entropy term. Notice that <span class="math inline">\(F\)</span>
+provides a lower bound on the log likelihood <span
+class="math inline">\(\log\int_z p_{\theta}(z,x) dz\)</span>. Therefore,
+in order to maximize the log likelihood (the model of the world), we can
+maximize the lower bound <span class="math inline">\(F\)</span>.</p>
+<p>The natural question that arises at this stage is how we can perform
+maximization on <span class="math inline">\(F\)</span>. However, before
+we proceed to that, it is helpful to understand the model from another
+perspective. This perspective views the key to the modelling of the
+world as an inverse problem: knowing that there is a cause <span
+class="math inline">\(z\)</span> of the observations <span
+class="math inline">\(x\)</span>, can we model the inverse of the
+generation process, or the posterior distribution <span
+class="math inline">\(p_{\theta}(z|x)\)</span>? We may resort to Baye’s
+rule i.e. <span class="math inline">\(p_{\theta}(z|x) =
+\frac{p_{\theta}(x|z)p_{\theta}(z)}{p_{\theta}(x)}\)</span> but again
+the denominator is intractable. To solve this problem, we introduce an
+approximate distribution <span class="math inline">\(q(z)\)</span> of
+<span class="math inline">\(p_{\theta}(z|x)\)</span> we try to minimize
+the KL divergence between <span class="math inline">\(q(z)\)</span> and
+<span class="math inline">\(p_{\theta}(z|x)\)</span>:</p>
+<p><span class="math display">\[
+\begin{aligned}
+   KL[q(z) \Vert p_{\theta}(z|x)]
+   &amp;= \mathbb{E}_q\left[\log q(z) - \log p_{\theta}(z|x)\right] \\
+   &amp;= \mathbb{E}_q\left[\log q(z) - \log
+\frac{p_{\theta}(z,x)}{p_{\theta}(x)}\right] \\
+   &amp;= \mathbb{E}_q\left[\log q(z) - \log p_{\theta}(z,x)\right] +
+\log p_{\theta}(x) \\
+   &amp;= -F + \log p_{\theta}(x) \\
+\end{aligned}
+\]</span></p>
+<p>Notice that since the <span class="math inline">\(KL\)</span>
+divergence is always greater than or equal to 0, we reached the
+conclusion that <span class="math inline">\(F\)</span> is a lower bound
+for <span class="math inline">\(\log p_{\theta}(x)\)</span>. Therefore
+(again) to maximize the log likelihood of the model, we can maximize
+<span class="math inline">\(F\)</span>.</p>
+<h1 id="maximizing-f-the-em-algorithm">Maximizing <span
+class="math inline">\(F\)</span>: the EM algorithm</h1>
+<p>Given the objective of maximizing the lower bound <span
+class="math inline">\(F\)</span>, the Expectation-Maximization (EM)
+algorithm alternates between the E-step and the M-step:</p>
+<p><strong>E(xpectation) step:</strong> optimize <span
+class="math inline">\(F(q(z),\theta)\)</span> with respect to <span
+class="math inline">\(q(z)\)</span> over hidden variables, holding the
+parameters <span class="math inline">\(\theta\)</span> fixed:</p>
+<p><span class="math display">\[q^{(k)}(z) := arg\max_{q(z)}
+F(q(z),\theta^{(k-1)})\]</span></p>
+<p><strong>M(aximization) step:</strong> optimize <span
+class="math inline">\(F(q(z),\theta)\)</span> with respect to <span
+class="math inline">\(\theta\)</span> over hidden variables, holding the
+hidden distribution fixed:</p>
+<p><span class="math display">\[\theta^{(k)} := arg\max_{\theta}
+F(q^{(k)}(z),\theta)
+=  arg\max_{\theta}\mathbb{E}_{q^{(k)}(z)}\left[\log p_{\theta}
+(z,x)\right]\]</span></p>
+<p>The second equation in the M-step comes from the fact that the
+entropy term <span class="math inline">\(H[q]\)</span> is constant with
+respect to <span class="math inline">\(\theta\)</span>. Also, the name
+of the first step may be a bit confusing as there is no “expectation”
+computed there. However, if we consider the fact that <span
+class="math inline">\(F=-KL[q(z) \Vert p_{\theta}(z|x)]+\log
+p_{\theta}(x)\)</span>, we could see that the maximum of <span
+class="math inline">\(F\)</span> is reached when the <span
+class="math inline">\(KL\)</span> term goes to 0 i.e. <span
+class="math inline">\(q(z) = p_{\theta}(z|x)\)</span>. Therefore
+theoretically, we can consider the E-step as “setting <span
+class="math inline">\(q(z) = p_{\theta}(z|x)\)</span> and compute the
+expectation <span class="math inline">\(\mathbb{E}_{
+p_{\theta}(z|x)}\left[\log p_{\theta} (z,x)\right]\)</span>” and the
+M-step as “maximizing the computed expectation”.</p>
+<p>An example of the EM algorithm. TODO</p>
+<h1
+id="predictive-coding-as-a-special-case-of-the-em-algorithm">Predictive
+Coding as a special case of the EM algorithm</h1>
+<p>So how is predictive coding (PC) related to the EM algorithm?
+Foundamentally, the idea comes from Rajesh P.N. Rao in his 1999 paper <a
+href="https://www.sciencedirect.com/science/article/pii/S004269899800279X"><em>An
+optimal estimation approach to visual perception and learning</em></a>,
+where he described the purpose of the neural activities as to build up
+an internal model of the world i.e. to solve the inverse problem of
+finding the hidden causes of the brain’s perceptions. This is exactly
+the latent variable model that the EM algorithm tries to optimize.
+Specifically, instead of searching over the distributional space to find
+the optimal <span class="math inline">\(q(z)\)</span>, we now try to
+find the most likely value of <span class="math inline">\(z\)</span>
+denoted as <span class="math inline">\(\phi\)</span> (although this is
+not a fully accurate analogy, but think of <span
+class="math inline">\(z\)</span> as the neural activities!). In other
+words, we assume <span class="math inline">\(q(z)\)</span> is a delta
+function with its mass concentrated at <span
+class="math inline">\(\phi\)</span> and perform the maximum a posteriori
+(MAP) estimation. Notice that in this case, we may no longer be able to
+decrease the <span class="math inline">\(KL\)</span> term to 0, as <span
+class="math inline">\(p_{\theta}(z|x)\)</span> may not necessarily be a
+delta function.</p>
+<p>Now, recall that our definition of the lower bound <span
+class="math inline">\(F\)</span> is <span class="math inline">\(\int
+q(z)\log \frac{p_{\theta}(z,x)}{q(z)}dz\)</span>. With the
+delta-function assumption on <span class="math inline">\(q(z)\)</span>
+we can re-write it as:</p>
+<p><span class="math display">\[
+\begin{aligned}
+   F
+   &amp;= \int q(z)\log \frac{p_{\theta}(z,x)}{q(z)}dz \\
+   &amp;= \int q(z)\log p_{\theta}(z,x) dz - \int q(z)\log q(z) dz  \\
+   &amp;= \log p_\theta(x, \phi) + const.
+\end{aligned}
+\]</span></p>
+<p>The third equality comes from the fact that for a delta function
+<span class="math inline">\(\delta(\cdot)\)</span> concentrated at <span
+class="math inline">\(\phi\)</span>, the term $(z)h(z)dz $ for any
+function <span class="math inline">\(h(\cdot)\)</span> equals <span
+class="math inline">\(h(\phi)\)</span>, and the fact that the second
+term <span class="math inline">\(\int q(z)\log q(z) dz\)</span> is
+constant with respect to <span class="math inline">\(\phi\)</span>.
+Considering that <span class="math inline">\(\log p_\theta(x, \phi) =
+\log p_{\theta}(x|\phi)+\log p_{\theta}(\phi)\)</span>, where <span
+class="math inline">\(p_{\theta}(\phi)\)</span> is the prior of <span
+class="math inline">\(\phi\)</span>, the EM algorithm becomes:</p>
+<p><strong>E(xpectation) step:</strong> with <span
+class="math inline">\(\theta\)</span> fixed <span
+class="math display">\[\phi^{(k)} = arg\max_{\phi} \log
+p_{\theta^{(k-1)}}(x|\phi)+\log p_{\theta^{(k-1)}}(\phi)\]</span></p>
+<p><strong>M(aximization) step:</strong> with <span
+class="math inline">\(\phi\)</span> fixed <span
+class="math display">\[\theta^{(k)} = arg\max_{\theta} \log
+p_{\theta}(x|\phi^{(k-1)})+\log p_{\theta}(\phi^{(k-1)})\]</span></p>
+<p>We now assume that <span class="math inline">\(x|\phi \sim
+\mathcal{N}(f_w(\phi), \Sigma_x)\)</span>, where <span
+class="math inline">\(\mathcal{N}\)</span> denotes the Gassian density
+function, <span class="math inline">\(f_w(\cdot)\)</span> is a function
+parameterized by <span class="math inline">\(w\)</span> and <span
+class="math inline">\(\Sigma_x\)</span> is the covariance matrix of this
+Gaussian distribution, and that the prior of <span
+class="math inline">\(\phi\)</span> is <span
+class="math inline">\(\mathcal{N}(\mu, \Sigma_{\phi})\)</span>.
+Therefore the whole model is parameterized by <span
+class="math inline">\(\theta = \{w,\Sigma_x,\mu,\Sigma_{\phi}
+\}\)</span>, and the objective functions becomes:</p>
+<p><span class="math display">\[
+\begin{aligned}
+   L &amp;= \log p_\theta(x, \phi) \\
+   &amp;= \log p_{\theta}(x|\phi)+\log p_{\theta}(\phi) \\
+   &amp;= -\frac{1}{2}(x-f_w(\phi))^T \Sigma_x^{-1}(x-f_w(\phi)) -
+\frac{1}{2}\log|\Sigma_x|
+   \\ &amp;- \frac{1}{2}(\phi-\mu)^T \Sigma_\phi^{-1}(\phi-\mu) -
+\frac{1}{2}\log|\Sigma_\phi|
+\end{aligned}
+\]</span></p>
+<p>To maximize <span class="math inline">\(L\)</span> over <span
+class="math inline">\(\phi\)</span> and <span
+class="math inline">\(\theta\)</span>, the gradients <span
+class="math inline">\(\frac{\partial L}{\partial \phi}\)</span> and
+<span class="math inline">\(\frac{\partial L}{\partial \theta}\)</span>
+can be computed, which will result in a neural network implementation
+that is also biologically plausible. An in-depth discussion of this
+implementation is beyond the scope of this blog and can be found in
+Prof. Rafal Bogacz’s <a
+href="https://www.sciencedirect.com/science/article/pii/S0022249615000759">tutorial</a>.</p>
+<h1 id="further-thoughts">Further thoughts</h1>
+<p>This blog is written to summarize my perspective of the predictive
+coding algorithm as a special case of the EM algorithm, formulated
+during the first few months of my PhD research. There are two questions
+that I have been thinking about. First, although Prof. Rafal Bogacz’s <a
+href="https://www.sciencedirect.com/science/article/pii/S0022249615000759">tutorial</a>
+has laid out ways of representing the parameters <span
+class="math inline">\(\theta\)</span> in a network implementation, the
+covariance matrices <span class="math inline">\(\Sigma\)</span> seem
+less likely to be computed in the brain. So how are they represented
+biologically? The answer is that they can be encoded into recurrent
+connections that are ubiquitous in the cortex, and we can mathematically
+derive the equivalence between the covariance matrix and recurrent
+connections! I’m current working on a paper with this theoretical result
+and a bunch of simulations related to it.</p>
+<p>Second, PC is a simplification of the EM algorithm, where we assume
+that <span class="math inline">\(q(z)\)</span> is a delta function. This
+assumption seems a bit too strict both mathematically and biologically:
+it will make the E-step of the EM algorithm unable to reach its
+theoretical optimum, and it does not account for the stochasticity of
+neural activities. Can we use a less strict assumption on the
+distribution <span class="math inline">\(q(z)\)</span>? This remains an
+interesting direction to pursue in the future.</p>
+
+
+<a href="index.html" class="button big">Back to Homepage</a>
+
+</body>
+</html>
