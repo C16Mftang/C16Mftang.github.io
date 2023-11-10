@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Mufeng Tang" />
+  <link rel="stylesheet" href="assets/css/main.css" />
+  <title>From the EM Algorithm to Predictive Coding</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: "Open Sans", sans-serif;
+      font-size: 15px;
+      color: #1a1a1a;
+      background-color: transparent;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 70em;
+      padding-left: 120px;
+      padding-right: 120px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.5em;
+        padding: 1em;
+      }
+      h1 {
+        font-size: 1.2em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+  </style>
+  <script
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"
+  type="text/javascript"></script>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<a href="index.html" class="button big">Back to Homepage</a>
+<header id="title-block-header">
+<h2 class="title">Attention and Linear Regression</h2>
+<p class="author">Mufeng Tang</p>
+<p class="date">November 10, 2023</p>
+</header>
+<!-- <nav id="TOC" role="doc-toc"> -->
+<!-- <ul>
+<li><a href="#models-of-the-observed-world">Models of the observed
+world</a></li>
+<li><a href="#maximizing-f-the-em-algorithm">Maximizing <span
+class="math inline">\(F\)</span>: the EM algorithm</a></li>
+<li><a
+href="#predictive-coding-as-a-special-case-of-the-em-algorithm">Predictive
+Coding as a special case of the EM algorithm</a></li>
+<li><a href="#further-thoughts">Further thoughts</a></li>
+</ul>
+</nav> -->
+<p>Ever since <a href="https://arxiv.org/abs/2008.02217">Hopfield
+	Network is All You Need</a>, many papers in the past few years have
+	pointed to the connection between Associative Memory (AM) models and the
+	attention mechanism in Transformers. To name but a few: <a
+	href="https://arxiv.org/abs/2202.04557">Universal Hopfield Network</a>,
+	<a href="https://arxiv.org/abs/2208.09416">Kernel Memory Networks</a>,
+	and the <a href="https://arxiv.org/abs/2112.04035">Tolman Eichenbaum
+	Machine</a>. Although the title of ‘Linking Transformers to how the
+	brain performs computations’ sounds very cool, at the heart of these
+	connections is the outer product between two matrices <span
+	class="math inline">\(A, B\in\mathbb R^{N\times d}\)</span>, which
+	results in a <span class="math inline">\(N\times N\)</span> matrix <span
+	class="math inline">\(AB^\top\)</span>. In AM models like Hopfield
+	Networks, this happens when you try to compare your query with each of
+	the stored memories, while in Transformers, this is the ‘affinity’
+	matrix <span class="math inline">\(QK^\top\)</span>. These <span
+	class="math inline">\(N\times N\)</span> matrices are nice, because they
+	stores all the pair-wise relationships between <em>what you have</em>
+	(<span class="math inline">\(K\)</span>) and <em>what you are
+	presented/queried with</em> (<span
+	class="math inline">\(Q\)</span>).</p>
+	<p>Since I’ve been working on AM for quite a while, I recently noticed
+	another fundamental model that might be (loosely) connected to
+	attention: <strong>linear regression</strong>. I find this connection
+	much more interesting than the connection between AM models and
+	Transformers, as AM models seek to memorize training patterns, while we
+	know that Transformers’ power goes far beyond memorizing training data:
+	they generalize. Meanwhile, as we learned in our first class of
+	statistics, regression models also generalize.</p>
+	<p>In the following part of this blog, I will write down the exact
+	mathematical expressions of this connection between linear regression
+	and self-attention and try to provide and interpretation and open
+	questions following this line. I do not seek to claim that ‘this is
+	going to be an interesting research topic’; rather, it’s just an
+	interesting finding that worth being transcribed from my scratch paper
+	to a markdown file. Whether it is worth being moved further to a formal
+	Latex file remains to be discovered - if you are reading this and come
+	up with a new research idea, let me know.</p>
+	<h3 id="the-maths">The Maths</h3>
+	<p>Let’s start from the simplest linear regression that we learned in
+	STATS101 (although I remember having a whole course on this - what did I
+	learn?). Let’s say we have some training data: independent variables
+	<span class="math inline">\(X\in\mathbb R^{N\times d}\)</span> and
+	dependent variables <span class="math inline">\(Y\in\mathbb R^{N\times
+	d_y}\)</span>. Also let’s call the regression coefficients/parameters
+	<span class="math inline">\(\beta\in\mathbb R^{d\times d_y}\)</span>.
+	The objective function of linear regression is: <span
+	class="math display">\[
+	\min_{\beta} \Vert Y - X\beta \Vert_F^2
+	\]</span> To get the optimal <span class="math inline">\(\beta\)</span>,
+	we take the derivative of the squared Frobenius norm with respective to
+	<span class="math inline">\(\beta\)</span> and set it to 0. The optimal
+	<span class="math inline">\(\hat\beta\)</span> can be written as (I’ll
+	skip the steps because you can literally find it everywhere): <span
+	class="math display">\[
+	\hat\beta = (X^\top X)^{-1}X^\top Y
+	\]</span> Then, according to this linear model, the fitted values should
+	be: <span class="math display">\[
+	\hat Y = X\hat\beta = X(X^\top X)^{-1}X^\top Y
+	\]</span> Without loss of generality, if we assume the <span
+	class="math inline">\(N\)</span> data points have zero mean, the middle
+	<span class="math inline">\((X^TX)^{-1}\)</span> matrix is the inverse
+	of the covariance matrix of the dataset. Let’s call it <span
+	class="math inline">\(S^{-1}\)</span>, then the fitted values become:
+	<span class="math display">\[
+	\hat Y = \textcolor{red}{X} \textcolor{blue}{S^{-1}}
+	\textcolor{red}{X^\top} Y
+	\]</span> (the colors will be useful later). That’s all about linear
+	regression. Now let’s look at the attention mechanism. For clarity and
+	simplicity, I’ll focus on the self-attention here. We again assume some
+	data <span class="math inline">\(X\in\mathbb R^{N\times d}\)</span>,
+	where <span class="math inline">\(N\)</span> now denotes the input
+	sequence length and <span class="math inline">\(d\)</span> the size of
+	each embedded token vector. We would then multiply <span
+	class="math inline">\(X\)</span> with three trainable weight matrices
+	<span class="math inline">\(W_q \in\mathbb R^{d\times d_k}\)</span>,
+	<span class="math inline">\(W_k\in\mathbb R^{d\times d_k}\)</span> and
+	<span class="math inline">\(W_v\in\mathbb R^{d\times d_v}\)</span>
+	respectively to get the query <span
+	class="math inline">\(Q=XW_q\in\mathbb R^{N\times d_k}\)</span> , key
+	<span class="math inline">\(K=XW_k\in\mathbb R^{N\times d_k}\)</span>
+	and value <span class="math inline">\(V=XW_v \in\mathbb R^{N\times
+	d_v}\)</span>. The attention is then calculated: <span
+	class="math display">\[
+	A(ttention) = \text{softmax}(\frac{QK^\top}{\sqrt d_k})V
+	\]</span> Now, let’s express the <span class="math inline">\(Q\)</span>
+	and <span class="math inline">\(K\)</span> matrices as <span
+	class="math inline">\(X\)</span> and their corresponding weight matrices
+	and some color codes: <span class="math display">\[
+	A = \text{softmax}(\textcolor{red}{X}
+	\textcolor{blue}{\frac{W_qW_k^\top}{\sqrt d_k}}
+	\textcolor{red}{X^\top})V \quad cf. \quad \hat Y = \textcolor{red}{X}
+	\textcolor{blue}{(X^\top X)^{-1}} \textcolor{red}{X^\top} Y =
+	\textcolor{red}{X} \textcolor{blue}{S^{-1}} \textcolor{red}{X^\top} Y
+	\]</span> I hope at this point, the color coded equation has made it
+	quite clear that calculating the fitted values of linear regression and
+	self-attention are doing something similar: they both take the form of
+	<span class="math inline">\(XMX^\top\)</span>. For linear regression
+	this <span class="math inline">\(M\)</span> is the inverse covariance
+	matrix of the data, and for self-attention this <span
+	class="math inline">\(M\)</span> is the product of the learnable
+	parameters <span class="math inline">\(W_qW_k^\top\)</span>. In
+	addition, self-attention has a softmax function that performs some
+	nonlinear transformation of this matrix product.</p>
+	<h3 id="interpretations">Interpretations</h3>
+	<p>Having set up the mathematical similarity between these two, we can
+	come up with some interpretations of both linear regression and
+	self-attention.</p>
+	<p><img src="https://github.com/C16Mftang/C16Mftang.github.io/blob/master/images/UHN2.jpeg?raw=true" style="zoom:35%;" /></p>
+	<p><strong>First, for linear regression</strong>: We can now interpret
+	linear regression as a type of Universal Hopfield Networks. The fitted
+	values <span class="math inline">\(\hat Y\)</span> are now a weighted
+	sum of the original dependent variables <span
+	class="math inline">\(Y_1,...,Y_N\)</span> in the training set, where
+	the weights a some kind of ‘similarity measure’ between each pair of
+	training data <span class="math inline">\(X_i\)</span> and <span
+	class="math inline">\(X_j\)</span>. When <span
+	class="math inline">\(S\)</span> is identity, this similarity measure is
+	simply dot product, and I have hand-drawn a diagram of this process
+	above. Imagine if <span class="math inline">\(X_i\)</span>’s are a bunch
+	of orthonormal vectors, then the dot product <span
+	class="math inline">\(X_i^\top X_j\)</span> will be zero unless <span
+	class="math inline">\(i=j\)</span>. In our example above this will give
+	us exactly the desired output <span class="math inline">\(Y_2\)</span>.
+	However, almost always we don’t get orthonormal vectors and similarity
+	by dot product is almost never a good idea. The original <a
+	href="https://arxiv.org/abs/2202.04557">Universal Hopfield Network
+	paper</a> discussed this so I will not go into details about this.</p>
+	<p>When <span class="math inline">\(S\)</span> is not identity, the
+	product <span class="math inline">\(X_i^\top S^{-1} X_j\)</span> is in
+	fact a ‘whitened’ dot product that makes the similarity measure more
+	robust to variances and correlations between features, because we can
+	effective decompose <span class="math inline">\(S^{-1}\)</span> into <a
+	href="https://en.wikipedia.org/wiki/Whitening_transformation">whitening
+	matrices</a>. I had some experiments in my <a
+	href="https://arxiv.org/abs/2305.11982">recent paper</a> that shows the
+	benefits of this whitening step before dot product. Conceptually, the
+	division by <span class="math inline">\(\sqrt d_k\)</span> in
+	self-attention seems to serve the same purpose as to handle variable
+	key/query pairs, although it doesn’t help handle the correlated features
+	like a whitening matrix does.</p>
+	<p>Another important point to make about this interpretation is that
+	although linear regression itself isn’t an AM model, in the case where
+	we query it with an original training data say <span
+	class="math inline">\(X_0\)</span>(instead of a new data point), what it
+	does is essentially AM, by memorizing the pattern <span
+	class="math inline">\([X_0, Y_0]\)</span>. When the <span
+	class="math inline">\(N \leq d\)</span> we can actually recall <span
+	class="math inline">\(Y_0\)</span> perfectly (imagine fitting a line
+	with two dots on a 2d plane), so the capacity of a <strong>linear
+	regression AM model</strong> (on condition of perfect recall) should be
+	<span class="math inline">\(N_{max}=d\)</span>.</p>
+	<p><strong>Second, for attention</strong>: This similarity brings us to
+	interpret the attention mechanism as some type of regression operation.
+	If we map the value <span class="math inline">\(V\)</span> to our
+	dependent variable <span class="math inline">\(Y\)</span>, attention can
+	be considered as the fitted value by a regression model trained on <span
+	class="math inline">\(N\)</span> <span
+	class="math inline">\(X_i\)</span> and <span
+	class="math inline">\(V_i\)</span> pairs, given a seen example <span
+	class="math inline">\(X\)</span> (self-attention) or an unseen example
+	<span class="math inline">\(\tilde X\)</span> (cross-attention). So at
+	the end of the day, <strong>the attention layer is secretly learning a
+	linear regression between its key-value pairs.</strong></p>
+	<h3 id="some-open-questions-worth-looking-into">Some open questions
+	worth looking into</h3>
+	<p>Despite the similarity, one can argue that the connection between
+	attention and linear regression is quite loose. Indeed, their difference
+	is also quite obvious: attention uses a softmax function that make the
+	largest affinity between two vectors stand out whereas linear regression
+	doesn’t have this mechanism; the matrix <span class="math inline">\(W_q
+	W_k^\top\)</span> in attention is trainable whereas the inverse
+	covariance matrix <span class="math inline">\((X^\top X)^{-1}\)</span>
+	is directly calculated from the embedded tokens. These differences opens
+	up a few questions that I wanted to look into (if time and energy allow
+	of course…):</p>
+	<ul>
+	<li>What does the <span class="math inline">\(d\times d\)</span> matrix
+	<span class="math inline">\(W_q W_k^\top / \sqrt d_k\)</span> look like?
+	After training with an autoregressive model, does it implicitly learn
+	the inverse covariance matrix of the embeddings to perform the
+	(beneficial) whitening operation when we compare query and keys?</li>
+	<li>If it doesn’t learn the whitening operation, can we hand-craft some
+	whitening step into the architecture of Transformer and see if it helps
+	with the performance? This implementation should be quite
+	straightforward because we don’t actually need to invert the covariance
+	matrix of embeddings directly - there are loads of ways to transform it
+	into whitening matrices (for example eigendecomposition). Or maybe layer
+	normalization already achieved this?</li>
+	<li>Instead of training two weights <span
+	class="math inline">\(W_q\)</span> and <span
+	class="math inline">\(W_k\)</span> separately, can we train a single
+	<span class="math inline">\(d\times d\)</span> matrix <span
+	class="math inline">\(W=W_q W_k^\top\)</span>, and, in cases where we
+	need to access the individual weights, we can decompose <span
+	class="math inline">\(W\)</span> to get some pseudo-<span
+	class="math inline">\(W_q\)</span> or pseudo-<span
+	class="math inline">\(W_k\)</span> that are sufficient to get us some
+	representation of <span class="math inline">\(X\)</span>?</li>
+	</ul>
+	<p>As I’m not an expert in Transformers or LLMs (been in the niche of
+	NeuroAI for too long…), some of these questions have probably been asked
+	or addressed. If you are reading this blog and happen to know any works
+	related to these questions, please let me know. At the same time, if any
+	of these findings/questions sparks an idea, please also let me know and
+	I’m happy to discuss :)</p>
+
+<a href="index.html" class="button big">Back to Homepage</a>
+
+</body>
+</html>
