@@ -5,20 +5,21 @@
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <meta name="author" content="Mufeng Tang" />
+  <link rel="stylesheet" href="assets/css/main.css" />
   <title>From the EM Algorithm to Predictive Coding</title>
   <style>
     html {
       line-height: 1.5;
       font-family: "Open Sans", sans-serif;
-      font-size: 17px;
+      font-size: 15px;
       color: #1a1a1a;
       background-color: transparent;
     }
     body {
       margin: 0 auto;
       max-width: 70em;
-      padding-left: 50px;
-      padding-right: 50px;
+      padding-left: 120px;
+      padding-right: 120px;
       padding-top: 50px;
       padding-bottom: 50px;
       hyphens: auto;
@@ -162,8 +163,9 @@
   <![endif]-->
 </head>
 <body>
+<a href="index.html" class="button big">Back to Homepage</a>
 <header id="title-block-header">
-<h1 class="title">From the EM Algorithm to Predictive Coding</h1>
+<h2 class="title">From the EM Algorithm to Predictive Coding</h2>
 <p class="author">Mufeng Tang</p>
 <p class="date">February 27, 2022</p>
 </header>
@@ -192,7 +194,7 @@ since I come from a statistical background to the field of theoretical
 neuroscience, this blog may be particularly helpful for
 statisticians/mathematicians/computer scientists to understand
 predictive coding, an interesting theory of how our brain works.</p>
-<h1 id="models-of-the-observed-world">Models of the observed world</h1>
+<h3 id="models-of-the-observed-world">Models of the observed world</h3>
 <p>The motivation for the EM algorithm is to build up a model <span
 class="math inline">\(\theta\)</span> of the observed world <span
 class="math inline">\(x\)</span>. The goal is to maximize the log
@@ -200,7 +202,7 @@ likelihood with respect to <span
 class="math inline">\(\theta\)</span>:</p>
 <p><span class="math display">\[\log{p_{\theta}(x)}\]</span></p>
 <p>In particular, the EM algorithm assumes that there is a hidden, or
-‘latent’ cause <span class="math inline">\(z\)</span> of the
+'latent' cause <span class="math inline">\(z\)</span> of the
 observations <span class="math inline">\(x\)</span>, and therefore the
 log likelihood can be written as:</p>
 <p><span class="math display">\[\log\int_z p_{\theta}(z,x)
@@ -273,8 +275,8 @@ conclusion that <span class="math inline">\(F\)</span> is a lower bound
 for <span class="math inline">\(\log p_{\theta}(x)\)</span>. Therefore
 (again) to maximize the log likelihood of the model, we can maximize
 <span class="math inline">\(F\)</span>.</p>
-<h1 id="maximizing-f-the-em-algorithm">Maximizing <span
-class="math inline">\(F\)</span>: the EM algorithm</h1>
+<h3 id="maximizing-f-the-em-algorithm">Maximizing <span
+class="math inline">\(F\)</span>: the EM algorithm</h3>
 <p>Given the objective of maximizing the lower bound <span
 class="math inline">\(F\)</span>, the Expectation-Maximization (EM)
 algorithm alternates between the E-step and the M-step:</p>
@@ -308,9 +310,9 @@ expectation <span class="math inline">\(\mathbb{E}_{
 p_{\theta}(z|x)}\left[\log p_{\theta} (z,x)\right]\)</span>” and the
 M-step as “maximizing the computed expectation”.</p>
 <p>An example of the EM algorithm. TODO</p>
-<h1
+<h3
 id="predictive-coding-as-a-special-case-of-the-em-algorithm">Predictive
-Coding as a special case of the EM algorithm</h1>
+Coding as a special case of the EM algorithm</h3>
 <p>So how is predictive coding (PC) related to the EM algorithm?
 Foundamentally, the idea comes from Rajesh P.N. Rao in his 1999 paper <a
 href="https://www.sciencedirect.com/science/article/pii/S004269899800279X"><em>An
@@ -397,7 +399,7 @@ that is also biologically plausible. An in-depth discussion of this
 implementation is beyond the scope of this blog and can be found in
 Prof. Rafal Bogacz’s <a
 href="https://www.sciencedirect.com/science/article/pii/S0022249615000759">tutorial</a>.</p>
-<h1 id="further-thoughts">Further thoughts</h1>
+<h3 id="further-thoughts">Further thoughts</h3>
 <p>This blog is written to summarize my perspective of the predictive
 coding algorithm as a special case of the EM algorithm, formulated
 during the first few months of my PhD research. There are two questions
